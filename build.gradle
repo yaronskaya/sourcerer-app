@@ -39,3 +39,14 @@ protobuf {
         artifact = "com.google.protobuf:protoc:3.0.0"
     }
 }
+
+// Include dependent libraries in archive.
+jar {
+    manifest {
+        attributes "Main-Class": "$mainClassName"
+    }
+
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
