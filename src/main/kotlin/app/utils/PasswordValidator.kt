@@ -5,7 +5,7 @@ package app.utils
 import com.beust.jcommander.IParameterValidator
 import com.beust.jcommander.ParameterException
 
-object PasswordValidator : IParameterValidator {
+class PasswordValidator : IParameterValidator {
     @Throws(ParameterException::class)
     override fun validate(name: String, value: String) {
         if (!isValidPassword(value)) {
@@ -15,6 +15,6 @@ object PasswordValidator : IParameterValidator {
     }
 
     fun isValidPassword(password: String): Boolean {
-        return Regex("^[a-zA-Z0-9_.+-]$").containsMatchIn(password)
+        return Regex("^[a-zA-Z0-9_.+-]+$").containsMatchIn(password)
     }
 }

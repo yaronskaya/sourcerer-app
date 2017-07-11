@@ -5,7 +5,7 @@ package app.utils
 import com.beust.jcommander.IParameterValidator
 import com.beust.jcommander.ParameterException
 
-object EmailValidator : IParameterValidator {
+class EmailValidator : IParameterValidator {
     @Throws(ParameterException::class)
     override fun validate(name: String, value: String) {
         if (!isValidEmail(value)) {

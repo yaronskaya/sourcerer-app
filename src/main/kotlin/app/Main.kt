@@ -2,24 +2,56 @@
 
 package app
 
-import app.utils.Args
+import app.utils.CommandConfig
+import app.utils.CommandExplore
+import app.utils.Options
 import com.beust.jcommander.JCommander
 import com.beust.jcommander.ParameterException
+import kotlin.system.exitProcess
 
-fun main(argv : Array<String>) {
-    val args = Args()
+fun main(argv: Array<String>) {
+    val commandExplore = "explore"
+    val commandConfig = "config"
+
+    val options = Options()
+    val explore = CommandExplore()
+    val config = CommandConfig()
+    val jc: JCommander = JCommander.newBuilder()
+            .programName("sourcerer")  // Used for usage method.
+            .addObject(options)
+            .addCommand(commandExplore, explore)
+            .addCommand(commandConfig, config)
+            .build()
+
+    Configurator.setCurrentOptions(options)
+
     try {
-        JCommander.newBuilder()
-                .addObject(args)
-                .build()
-                .parse(*argv)
+        jc.parse(*argv)
     } catch (e: ParameterException) {
         println(e.message)
-        return
+        exitProcess(1)  // Reporting failure with non-zero exit code.
     }
 
-    println(arrayOf(args.username, args.password, args.path).joinToString())
+    when (jc.parsedCommand) {
+        commandExplore -> explore(explore)
+        commandConfig -> config(config)
+        else -> help(jc)  // Show help info if no command specified.
+    }
 
-    val greeter = Greeter(args)
-    greeter.run()
+    println(arrayOf(options.username, options.password).joinToString())
+    println(jc.parsedCommand)
+    println(explore.path)
+}
+
+fun explore(options: CommandExplore) {
+    Explorer(options).explore()
+}
+
+fun config(options: CommandConfig) {
+    // TODO(anatoly): Call Configurator for updating options.
+}
+
+fun help(jc: JCommander) {
+    println("Sourcerer app. More info at http://sourcerer.io.")
+    jc.usage()  // Will show detailed info about usage based on annotations.
 }

@@ -5,7 +5,7 @@ package app.utils
 import com.beust.jcommander.IParameterValidator
 import com.beust.jcommander.ParameterException
 
-object UsernameValidator : IParameterValidator {
+class UsernameValidator : IParameterValidator {
     @Throws(ParameterException::class)
     override fun validate(name: String, value: String) {
         if (!isValidUsername(value)) {
@@ -15,6 +15,6 @@ object UsernameValidator : IParameterValidator {
     }
 
     fun isValidUsername(username: String): Boolean {
-        return Regex("^[a-zA-Z0-9_.+-]$").containsMatchIn(username)
+        return Regex("^[a-zA-Z0-9_.+-]+$").containsMatchIn(username)
     }
 }
