@@ -43,12 +43,18 @@ fun main(argv: Array<String>) {
     println(explore.path)
 }
 
-fun explore(options: CommandExplore) {
-    Explorer(options).explore()
+fun explore(commandOptions: CommandExplore) {
+    Explorer(commandOptions).explore()
 }
 
-fun config(options: CommandConfig) {
-    // TODO(anatoly): Call Configurator for updating options.
+fun config(commandOptions: CommandConfig) {
+    val options = Configurator.createOptions(commandOptions.pair)
+
+    if (commandOptions.local) {
+        Configurator.saveLocalLevelConfig(options)
+    } else if (commandOptions.user) {
+        Configurator.saveUserLevelConfig(options)
+    }
 }
 
 fun help(jc: JCommander) {

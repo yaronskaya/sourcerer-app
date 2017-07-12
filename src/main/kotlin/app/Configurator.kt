@@ -3,6 +3,8 @@
 package app
 
 import app.utils.Options
+import app.utils.PasswordValidator
+import app.utils.UsernameValidator
 import org.apache.commons.configuration2.builder.fluent.Configurations
 import org.apache.commons.configuration2.ex.ConfigurationException
 import java.io.File
@@ -18,6 +20,7 @@ object Configurator {
     val configPassword = "password"
     val configSilent = "silent"
 
+    // Options levels are presented in priority decreasing order.
     private var current: Options = Options()  // Command-line arguments.
     private var local: Options = Options()  // Local repository config file.
     private var user: Options = Options()  // Global user defined config file.
@@ -31,8 +34,20 @@ object Configurator {
     val options: Options  // Final options that will be used by app.
         get() = mergeLevels()
 
+    // Working directory path.
+    val localDir = try {
+        System.getProperty("user.dir")
+    }
+    catch (e: SecurityException) { null }
+
+    // User directory path.
+    val userDir = try {
+        System.getProperty("user.home")
+    }
+    catch (e: SecurityException) { null }
+
     init {
-        // User config location is known so load it at initialization.
+        loadLocalLevelConfig()
         loadUserLevelConfig()
     }
 
@@ -124,23 +139,59 @@ object Configurator {
         current = options
     }
 
-    fun loadLocalLevelConfig(path: String) {
-        try {
-            local = loadConfig(path)
-        }
-        catch (e: SecurityException) {
-            // Read access denied.
+    fun loadLocalLevelConfig() {
+        if (localDir != null) {
+            local = loadConfig(localDir)
         }
     }
 
     fun loadUserLevelConfig() {
-        try {
-            // Get user directory path.
-            val dir = System.getProperty("user.dir")
-            user = loadConfig(dir)
+        if (userDir != null) {
+            user = loadConfig(userDir)
         }
-        catch (e: SecurityException) {
-            // Read access denied.
+    }
+
+    fun saveLocalLevelConfig(options: Options): Boolean {
+        if (userDir != null) {
+            return saveConfig(userDir, options)
         }
+
+        return false
+    }
+
+    fun saveUserLevelConfig(options: Options): Boolean {
+        if (userDir != null) {
+            return saveConfig(userDir, options)
+        }
+
+        return false
+    }
+
+    fun createOptions(pair: List<String>): Options {
+        val options = Options()
+
+        if (pair.count() != 2) {
+            return options
+        }
+
+        val (key, value) = pair
+
+        when (key) {
+            configUsername -> {
+                if (UsernameValidator().isValidUsername(value)) {
+                    options.username = value
+                }
+            }
+            configPassword -> {
+                if (PasswordValidator().isValidPassword(value)) {
+                    options.password = value
+                }
+            }
+            configSilent -> {
+                options.silent = value.toBoolean()
+            }
+        }
+
+        return options
     }
 }

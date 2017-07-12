@@ -9,14 +9,20 @@ import com.beust.jcommander.Parameters
         commandDescription = "Configure Sourcerer app")
 class CommandConfig {
     // Key value pair of configurable parameters.
-    @Parameter(description = "KEY VALUE")
-    var params: List<String> = arrayListOf()
-
-    // User level config.
-    @Parameter(names = arrayOf("--user"))
-    var user: Boolean = false
+    @Parameter(description = "KEY VALUE", arity = 2, order = 0)
+    var pair: List<String> = arrayListOf()
 
     // Local level config.
-    @Parameter(names = arrayOf("--local"))
-    var local: Boolean = true
+    @Parameter(names = arrayOf("--local"),
+            description = "Used to specify local level of configuration "
+                    +"(default)",
+
+            order = 1)
+    var local: Boolean = false
+
+    // User level config.
+    @Parameter(names = arrayOf("--user"),
+            description = "Used to specify user level of configuration",
+            order = 2)
+    var user: Boolean = false
 }

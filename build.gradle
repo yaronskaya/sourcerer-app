@@ -20,10 +20,6 @@ apply plugin: "com.google.protobuf"
 
 mainClassName = "app.MainKt"
 
-sourceSets {
-    deploy
-}
-
 repositories {
     mavenCentral()
 }
@@ -33,6 +29,7 @@ dependencies {
     compile "com.beust:jcommander:1.72"
     compile 'com.google.protobuf:protobuf-java:3.0.0'
     compile 'org.apache.commons:commons-configuration2:2.1.1'
+    compile group: 'commons-beanutils', name: 'commons-beanutils', version: '1.8.3'
 }
 
 protobuf {
