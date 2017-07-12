@@ -24,5 +24,5 @@ class Options {
     @Parameter(names = arrayOf("-s", "--silent"),
             description = "Silent mode",
             order = 2)
-    var silent: Boolean = false
+    var silent: Boolean? = null
 }

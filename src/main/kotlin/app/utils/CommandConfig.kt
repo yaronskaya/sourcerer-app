@@ -11,4 +11,12 @@ class CommandConfig {
     // Key value pair of configurable parameters.
     @Parameter(description = "KEY VALUE")
     var params: List<String> = arrayListOf()
+
+    // User level config.
+    @Parameter(names = arrayOf("--user"))
+    var user: Boolean = false
+
+    // Local level config.
+    @Parameter(names = arrayOf("--local"))
+    var local: Boolean = true
 }
