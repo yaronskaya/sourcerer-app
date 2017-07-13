@@ -28,8 +28,8 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "com.beust:jcommander:1.72"
     compile 'com.google.protobuf:protobuf-java:3.0.0'
-    compile 'org.apache.commons:commons-configuration2:2.1.1'
-    compile group: 'commons-beanutils', name: 'commons-beanutils', version: '1.8.3'
+    compile group: 'commons-configuration', name: 'commons-configuration',
+            version: '1.10'
 }
 
 protobuf {

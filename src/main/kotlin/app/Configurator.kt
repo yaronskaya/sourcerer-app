@@ -5,8 +5,8 @@ package app
 import app.utils.Options
 import app.utils.PasswordValidator
 import app.utils.UsernameValidator
-import org.apache.commons.configuration2.builder.fluent.Configurations
-import org.apache.commons.configuration2.ex.ConfigurationException
+import org.apache.commons.configuration.ConfigurationException
+import org.apache.commons.configuration.PropertiesConfiguration
 import java.io.File
 import java.io.IOException
 
@@ -83,7 +83,7 @@ object Configurator {
                 return options  // No configuration file
             }
 
-            val config = Configurations().properties(file)
+            val config = PropertiesConfiguration(file)
 
             // Accessing configuration properties. Unknown values should be
             // null to distinguish them from specified values from other levels.
@@ -92,7 +92,7 @@ object Configurator {
             options.silent = config.getBoolean(configSilent, null)
         }
         catch (e: ConfigurationException) {
-            // Error while initializing a Configuration object.
+            // Error while loading the properties file.
         }
         catch (e: SecurityException) {
             // Read access denied.
@@ -108,7 +108,7 @@ object Configurator {
 
             file.createNewFile()  // Creates a new file if it didn't exist.
 
-            val config = Configurations().properties(file)
+            val config = PropertiesConfiguration(file)
 
             if (options.username != null) {
                 config.setProperty(configUsername, options.username)
@@ -120,6 +120,8 @@ object Configurator {
                 config.setProperty(configSilent, options.silent)
             }
 
+            config.save(file)
+
             return true
         }
         catch (e: IOException) {
@@ -129,7 +131,7 @@ object Configurator {
             // Read access denied.
         }
         catch (e: ConfigurationException) {
-            // Error while initializing a Configuration object.
+            // Error while loading or saving the properties file.
         }
 
         return false
