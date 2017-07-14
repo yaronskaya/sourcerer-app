@@ -1,14 +1,15 @@
 // Copyright 2017 Sourcerer Inc. All Rights Reserved.
+// Author: Anatoly Kislov (anatoly@sourcerer.io)
 
 package app
 
 import app.utils.Options
 import app.utils.PasswordValidator
 import app.utils.UsernameValidator
-import org.apache.commons.configuration.ConfigurationException
-import org.apache.commons.configuration.PropertiesConfiguration
 import java.io.File
 import java.io.IOException
+import org.apache.commons.configuration.ConfigurationException
+import org.apache.commons.configuration.PropertiesConfiguration
 
 /**
  * Configurator is a singleton class that manages configuration files and
@@ -22,8 +23,7 @@ object Configurator {
 
     // Options levels are presented in priority decreasing order.
     private var current: Options = Options()  // Command-line arguments.
-    private var local: Options = Options()  // Local repository config file.
-    private var user: Options = Options()  // Global user defined config file.
+    private var config: Options = Options()  // Global user defined config file.
     private val default: Options  // Default values.
         get() {
             val default = Options()
@@ -34,12 +34,6 @@ object Configurator {
     val options: Options  // Final options that will be used by app.
         get() = mergeLevels()
 
-    // Working directory path.
-    val localDir = try {
-        System.getProperty("user.dir")
-    }
-    catch (e: SecurityException) { null }
-
     // User directory path.
     val userDir = try {
         System.getProperty("user.home")
@@ -47,14 +41,13 @@ object Configurator {
     catch (e: SecurityException) { null }
 
     init {
-        loadLocalLevelConfig()
         loadUserLevelConfig()
     }
 
     // Merges different levels of options into one options object in the next
     // order: current, local, user, default.
     private fun mergeLevels(): Options {
-        val levels = arrayListOf(current, local, user, default)
+        val levels = arrayListOf(current, config, default)
         val merged = Options()
 
         for (level in levels) {
@@ -77,7 +70,7 @@ object Configurator {
         val options = Options()
 
         try {
-            val file = File(path + File.separator + configFileName)
+            val file = File(path, configFileName)
 
             if (!file.exists() || !file.isFile) {
                 return options  // No configuration file
@@ -104,7 +97,7 @@ object Configurator {
     // Saves config file to specified path. Returns true on success.
     private fun saveConfig(path: String, options: Options): Boolean {
         try {
-            val file = File(path + File.separator + configFileName)
+            val file = File(path, configFileName)
 
             file.createNewFile()  // Creates a new file if it didn't exist.
 
@@ -141,24 +134,10 @@ object Configurator {
         current = options
     }
 
-    fun loadLocalLevelConfig() {
-        if (localDir != null) {
-            local = loadConfig(localDir)
-        }
-    }
-
     fun loadUserLevelConfig() {
         if (userDir != null) {
-            user = loadConfig(userDir)
+            config = loadConfig(userDir)
         }
-    }
-
-    fun saveLocalLevelConfig(options: Options): Boolean {
-        if (userDir != null) {
-            return saveConfig(userDir, options)
-        }
-
-        return false
     }
 
     fun saveUserLevelConfig(options: Options): Boolean {

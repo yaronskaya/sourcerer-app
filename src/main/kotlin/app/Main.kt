@@ -1,4 +1,5 @@
 // Copyright 2017 Sourcerer Inc. All Rights Reserved.
+// Author: Anatoly Kislov (anatoly@sourcerer.io)
 
 package app
 
@@ -49,12 +50,7 @@ fun explore(commandOptions: CommandExplore) {
 
 fun config(commandOptions: CommandConfig) {
     val options = Configurator.createOptions(commandOptions.pair)
-
-    if (commandOptions.local) {
-        Configurator.saveLocalLevelConfig(options)
-    } else if (commandOptions.user) {
-        Configurator.saveUserLevelConfig(options)
-    }
+    Configurator.saveUserLevelConfig(options)
 }
 
 fun help(jc: JCommander) {
