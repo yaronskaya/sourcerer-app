@@ -17,12 +17,12 @@ message Stats {
 
 // Commit information message.
 message Commit {
-    int32 id = 1;  // Commit id. Hashed initial id.
+    string id = 1;  // Commit id. Hashed initial id.
     int32 repo_id = 2;  // Repo id. TODO(anatoly): add details on how it is
         // computed.
     string author_name = 3;
     string author_email = 4;
-    string date = 5;
+    int32 date = 5;
     bool qommit = 6;  // Quality commit.
     int32 num_lines_add = 7;  // Number of lines for whole commit.
     int32 num_lines_deleted = 8;

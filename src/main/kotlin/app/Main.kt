@@ -45,7 +45,7 @@ fun main(argv: Array<String>) {
 }
 
 fun explore(commandOptions: CommandExplore) {
-    Explorer(commandOptions).explore()
+    RepoExplorer(commandOptions).explore()
 }
 
 fun config(commandOptions: CommandConfig) {
