@@ -16,7 +16,7 @@ import java.io.IOException
  */
 object SourcererApi {
     init {
-        FuelManager.instance.basePath = "http://localhost:8080"
+        FuelManager.instance.basePath = "http://192.168.0.150:3181"
     }
 
     val username
@@ -45,6 +45,42 @@ object SourcererApi {
         val (request, response, result) = Fuel.get("/commit")
                 .authenticate(username, password)
                 .body(commit.serialize())
+                .responseString()
+
+        val body = result.get()
+        Logger.debug("Request $name success")
+        return body
+    }
+
+    // Temprorary method to send mock data to commit server.
+    @Throws(IOException::class, HttpException::class)
+    fun postCommitTestBlocking(): String {
+        val name = "postCommitTestBlocking"
+        Logger.debug("Request $name initialized")
+        val (request, response, result) = Fuel.post("/commit")
+                .authenticate(username, password)
+                .body(CommitProtos.Commit.newBuilder()
+                        .setAuthorEmail("author@mail.com")
+                        .setAuthorName("author")
+                        .setDate(1000000)
+                        .setId("hash")
+                        .setNumLinesAdd(10)
+                        .setNumLinesDeleted(10)
+                        .setQommit(false)
+                        .setRepoId("hash")
+                        .addCommitStats(CommitProtos.Stats.newBuilder()
+                                .setLanguage("Java")
+                                .setTechnology("Network")
+                                .setNumLinesAdd(5)
+                                .setNumLinesDeleted(5)
+                                .build())
+                        .addCommitStats(CommitProtos.Stats.newBuilder()
+                                .setLanguage("Python")
+                                .setTechnology("OpenCV")
+                                .setNumLinesAdd(5)
+                                .setNumLinesDeleted(5)
+                                .build())
+                        .build().toByteArray().toString(Charsets.UTF_8))
                 .responseString()
 
         val body = result.get()

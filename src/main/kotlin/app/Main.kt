@@ -34,22 +34,16 @@ fun main(argv: Array<String>) {
     options.password = PasswordHelper.hashPassword(options.password)
     Configurator.options = options
 
-    if (options.help) {
-        showHelp(jc)
-        return
-    }
+    // Test mock commit message sending.
+    sendMock()
+}
 
-    if (options.setup) {
-        doSetup()
-        return
+fun sendMock() {
+    try {
+        SourcererApi.postCommitTestBlocking()
     }
-
-    when (jc.parsedCommand) {
-        commandAdd.name -> doAdd(commandAdd)
-        commandConfig.name -> doConfig(commandConfig)
-        commandList.name -> doList(commandList)
-        commandRemove.name -> doRemove(commandRemove)
-        else -> startUi()
+    catch (e: Exception) {
+        e.printStackTrace()
     }
 }
 
