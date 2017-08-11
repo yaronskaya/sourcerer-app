@@ -3,6 +3,7 @@
 
 package app
 
+import app.CodeLongevity
 import app.model.Repo
 import app.ui.ConsoleUi
 import app.utils.CommandConfig
@@ -15,6 +16,10 @@ import app.utils.RepoHelper
 import com.beust.jcommander.JCommander
 
 fun main(argv: Array<String>) {
+    val cl = CodeLongevity("/Users/heh/mozilla/aom/.git")
+    cl.test("dmazzoni@gmail.com")
+    return
+
     val options = Options()
     val commandAdd = CommandAdd()
     val commandConfig = CommandConfig()
