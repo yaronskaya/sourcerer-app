@@ -19,7 +19,7 @@ import com.beust.jcommander.JCommander
 fun main(argv: Array<String>) {
     //faf984f2dfbb66641d6094f21e5569c9ee27c1eb
     val cl = CodeLongevity("/Users/heh/projects/sourcerer/testrepo/.git", "")
-    cl.test("aleks@riseup.net")
+    cl.ohNoDoesItReallyWork("aleks@riseup.net")
     return
 
     val options = Options()

@@ -1,4 +1,5 @@
 // Copyright 2017 Sourcerer Inc. All Rights Reserved.
+// Author: Alexander Surkov (alex@sourcerer.io)
 
 package app
 
@@ -14,39 +15,40 @@ import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.eclipse.jgit.util.io.DisabledOutputStream
 
+import java.text.SimpleDateFormat
 import java.util.Date
 
 /**
- * Identifies a code line in a file in a revision.
+ * Represents a code line in a file revision.
  */
 class RevCommitLine(val commit: RevCommit, val file: String, val line: Int)
 
 /**
- * Represents a code line.
+ * Represents a code line in repo's history.
  *
  * TODO(Alex): the text arg is solely for testing proposes (remove it)
  */
 class CodeLine(val from: RevCommitLine, val to: RevCommitLine, val text: String) {
 
-    // XXX(Alex): oldId and newId may be computed as a hash built from commit,
+    // TODO(alex): oldId and newId may be computed as a hash built from commit,
     // file name and line number, if we are going to send the data outside a
     // local machine.
 
     /**
      * Id of the code line in a revision when the line was added. Used to
-     * update the line's lifetime computed in previous iterations.
-     * 
+     * identify a line and update its lifetime computed at the previous
+     * iteration.
      */
     val oldId: String = ""
 
     /**
-     * Id of the line in head revision (if this is an existing line) or
-     * a revision where the line was deleted.
+     * Id of the code line in a revision, where the line was deleted, or a head
+     * revision, if the line is alive.
      */
     val newId: String = ""
 
     /**
-     * A line age in seconds.
+     * The code line's age in seconds.
      */
     val age = to.commit.getCommitTime() - from.commit.getCommitTime()
 
@@ -54,10 +56,11 @@ class CodeLine(val from: RevCommitLine, val to: RevCommitLine, val text: String)
      * A pretty print of a code line; debugging.
      */
     fun printme() {
-        val fd = Date(from.commit.getCommitTime().toLong() * 1000).toLocaleString()
+        val df = SimpleDateFormat("yyyy-MM-dd HH:mm z")
+        val fd = df.format(Date(from.commit.getCommitTime().toLong() * 1000))
+        val td = df.format(Date(to.commit.getCommitTime().toLong() * 1000))
         val fc = "${from.commit.getName()} '${from.commit.getShortMessage()}'"
         val tc = "${to.commit.getName()} '${to.commit.getShortMessage()}'"
-        val td = Date(to.commit.getCommitTime().toLong() * 1000).toLocaleString()
         println("Line '$text' - '${from.file}:${from.line}' added in $fc $fd")
         println("  last known as '${to.file}:${to.line}' in $tc $td")
     }
@@ -73,13 +76,18 @@ class CodeLongevity(repoPath: String, tailRev: String) {
         if (tailRev != "") RevWalk(repo).parseCommit(repo.resolve(tailRev))
         else null
 
+    /**
+     * A list of all code lines, both alive and deleted, between the given
+     * revisions.
+     */
     var codeLines: MutableList<CodeLine> = mutableListOf()
 
     init {
         compute()
     }
 
-    fun test(email: String) {
+    // TODO(alex) debugging, remove it
+    fun ohNoDoesItReallyWork(email: String) {
         var sum: Long = 0
         var total: Long = 0;
         for (line in codeLines) {
@@ -87,7 +95,8 @@ class CodeLongevity(repoPath: String, tailRev: String) {
             if (author.getEmailAddress() != email) {
                 continue
             }
-            //println("got a line, age ${line.age}\n ${line.printme()}")
+            line.printme()
+            println("  Age: ${line.age} secs")
             sum += line.age
             total++
         }
@@ -96,33 +105,27 @@ class CodeLongevity(repoPath: String, tailRev: String) {
         //codeLines.forEach { line -> line.printme() }
 
         var avg = if (total > 0) sum / total else 0
-        println("avg code line age for <$email> is ${avg} seconds")
+        println("avg code line age for <$email> is ${avg} seconds, lines total: ${total}")
     }
 
     /**
-     * Computes age of all lines in the repo through all revisions.
+     * Scans through the repo for alive and deleted code lines, and stores them
+     * in the |codeLines| list.
      */
     private fun compute() {
         val treeWalk = TreeWalk(repo)
         treeWalk.setRecursive(true)
-        treeWalk.addTree(head!!.getTree())
+        treeWalk.addTree(head.getTree())
 
         val files: MutableMap<String, ArrayList<RevCommitLine>> = mutableMapOf()
 
         // Build a map of file names and their code lines.
         while (treeWalk.next()) {
-            // TODO(alex): skip binary files.
-            val fileName = treeWalk.getPathString()
-            val fileLoader = repo.open(treeWalk.getObjectId(0))
-            val fileText = RawText(fileLoader.getBytes())
-            val linesNum = fileText.size()
-            var lines = ArrayList<RevCommitLine>(linesNum)
-            var idx = 0
-            while (idx < fileText.size()) {
-                lines.add(RevCommitLine(head, fileName, idx))
-                idx++
+            val path = treeWalk.getPathString()
+            val lines = getFileLines(treeWalk.getObjectId(0), path, head)
+            if (lines != null) {
+                files.put(path, lines)
             }
-            files.put(fileName, lines)
         }
   
         val df = DiffFormatter(DisabledOutputStream.INSTANCE)
@@ -132,10 +135,9 @@ class CodeLongevity(repoPath: String, tailRev: String) {
         val revWalk = RevWalk(repo)
         revWalk.markStart(head)
 
-        var commit: RevCommit? = head
-        var parentCommit: RevCommit? = revWalk.next()  // proceed to head
+        var commit: RevCommit? = revWalk.next()  // move the walker to the head
         do {
-            parentCommit = revWalk.next()
+            var parentCommit: RevCommit? = revWalk.next()
 
             println("commit: ${commit!!.getName()}; '${commit.getShortMessage()}'")
             if (parentCommit != null) {
@@ -145,26 +147,40 @@ class CodeLongevity(repoPath: String, tailRev: String) {
                 println("parent commit: null")
             }
 
+            // A step back in commits history. Update the files map according
+            // to the diff.
             val diffs = df.scan(parentCommit, commit)
-
             for (diff in diffs) {
-                // XXX(alex): does it happen in the wilds?
+                val oldPath = diff.getOldPath()
+                val oldId = diff.getOldId().toObjectId()
+                val newPath = diff.getNewPath()
+                val newId = diff.getNewId().toObjectId()
+                println("old: '$oldPath', new: '$newPath'")
+
+                // Skip binary files.
+                var fileId =
+                    if (newPath != DiffEntry.DEV_NULL) newId else oldId
+                if (RawText.isBinary(repo.open(fileId).openStream())) {
+                    continue
+                }
+
+                // TODO(alex): does it happen in the wilds?
                 if (diff.changeType == DiffEntry.ChangeType.COPY) {
                     continue
                 }
 
-                // File was renamed, tweak the files map.
-                if (diff.changeType == DiffEntry.ChangeType.RENAME) {
-                    println("old path: ${diff.getOldPath()}")
-                    println("new path: ${diff.getNewPath()}")
-                    files.set(diff.getOldPath(),
-                              files.remove(diff.getNewPath())!!)
-                    println("oopsy")
-                    //continue
+                // File was deleted, put its lines into the files map.
+                if (diff.changeType == DiffEntry.ChangeType.DELETE) {
+                    var lines = getFileLines(oldId, oldPath, commit)!!
+                    files.put(oldPath, lines)
                 }
 
-                // Get a edit list and traverse it backwards to avoid indices
-                // adjustment.
+                val path = if (newPath != DiffEntry.DEV_NULL) newPath else oldPath
+                var lines = files.get(path)!!
+
+                // Update the lines array to match the diff's edit list changes.
+                // Traverse the edit list backwards to keep indices of the edit
+                // list and the lines array in sync.
                 val editList = df.toFileHeader(diff).toEditList().asReversed()
                 for (edit in editList) {
                     val delStart = edit.getBeginA()
@@ -175,10 +191,9 @@ class CodeLongevity(repoPath: String, tailRev: String) {
                     val insCount = edit.getLengthB()
                     println("del ($delStart, $delEnd), ins ($insStart, $insEnd)");
 
-                    // Deletion case. Chaise down the deleted lines through the
+                    // Deletion case. Chase down the deleted lines through the
                     // history.
                     if (delCount > 0) {
-                        val oldPath = diff.getOldPath()
                         var tmpLines = ArrayList<RevCommitLine>(delCount)
                         var idx = delStart;
                         while (idx < delEnd) {
@@ -186,46 +201,66 @@ class CodeLongevity(repoPath: String, tailRev: String) {
                             idx++
                         }
 
-                        files.get(oldPath)!!.addAll(delCount, tmpLines)
+                        lines.addAll(delStart, tmpLines)
                     }
 
                     // Insertion case. Report it.
                     if (insCount > 0) {
-                        val newPath = diff.getNewPath()
-                        var newLines = files.get(newPath)!!
-                        val fileLoader = repo.open(diff.getNewId().toObjectId())
+                        val fileLoader = repo.open(newId)
                         val fileText = RawText(fileLoader.getBytes())
 
-                        var idx = insStart
-                        while (idx < insEnd) {
+                        for (idx in insStart .. insEnd - 1) {
                             val from = RevCommitLine(commit, newPath, idx)
-                            var to = newLines.get(idx)
+                            var to = lines.get(idx)
                             val cl = CodeLine(from, to, fileText.getString(idx))
                             codeLines.add(cl)
-                            idx++
                         }
-                        newLines.subList(insStart, insEnd).clear()
+                        lines.subList(insStart, insEnd).clear()
                     }
+                }
+
+                // File was renamed, tweak the files map.
+                if (diff.changeType == DiffEntry.ChangeType.RENAME) {
+                    files.set(oldPath, files.remove(newPath)!!)
                 }
             }
             commit = parentCommit
         }
         while (parentCommit != null && parentCommit != tail)
 
-        // If tail revision is specified then we have file code lines unclaimed,
-        // push all of them into result lines list.
+        // If a tail revision was given then the map has to contain unclaimed
+        // code lines, i.e. the lines added before the tail revision. Push
+        // them all into the result lines list, so the caller can update their
+        // ages properly.
         if (tail != null) {
             for ((file, lines) in files) {
-                println(file)
-                println(lines.size)
-                var idx = 0
-                while (idx < lines.size) {
+                for (idx in 0 .. lines.size - 1) {
                     val from = RevCommitLine(tail, file, idx)
-                    val cl = CodeLine(from, lines[idx], "no data")
+                    val cl = CodeLine(from, lines[idx], "no data (too lazy to compute)")
                     codeLines.add(cl)
-                    idx++
                 }
             }
         }
+    }
+
+    /**
+     * Returns lines array of a text file of the given revision.
+     */
+    private fun getFileLines(fileId: ObjectId, filePath: String,
+                             commit: RevCommit) : ArrayList<RevCommitLine>? {
+        val fileLoader = repo.open(fileId)
+        if (RawText.isBinary(fileLoader.openStream())) {
+            return null
+        }
+
+        val fileText = RawText(fileLoader.getBytes())
+        var lines = ArrayList<RevCommitLine>(fileText.size())
+        var idx = 0
+        while (idx < fileText.size()) {
+            lines.add(RevCommitLine(commit, filePath, idx))
+            idx++
+        }
+
+        return lines
     }
 }
