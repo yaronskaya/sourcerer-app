@@ -3,6 +3,7 @@
 
 package app
 
+import app.CodeLongevity
 import app.model.LocalRepo
 import app.ui.ConsoleUi
 import app.utils.CommandConfig
@@ -16,6 +17,11 @@ import app.utils.UiHelper
 import com.beust.jcommander.JCommander
 
 fun main(argv: Array<String>) {
+    //faf984f2dfbb66641d6094f21e5569c9ee27c1eb
+    val cl = CodeLongevity("/Users/heh/projects/sourcerer/testrepo/.git", "")
+    cl.test("aleks@riseup.net")
+    return
+
     val options = Options()
     val commandAdd = CommandAdd()
     val commandConfig = CommandConfig()
