@@ -71,7 +71,8 @@ class CodeLine(val from: RevCommitLine, val to: RevCommitLine, val text: String)
  */
 class CodeLongevity(repoPath: String, tailRev: String) {
     val repo = FileRepository(repoPath)
-    val head: RevCommit = RevWalk(repo).parseCommit(repo.resolve("HEAD"));
+    val head: RevCommit =
+        RevWalk(repo).parseCommit(repo.resolve("refs/heads/master"))
     val tail: RevCommit? =
         if (tailRev != "") RevWalk(repo).parseCommit(repo.resolve(tailRev))
         else null
@@ -89,7 +90,7 @@ class CodeLongevity(repoPath: String, tailRev: String) {
     // TODO(alex) debugging, remove it
     fun ohNoDoesItReallyWork(email: String) {
         var sum: Long = 0
-        var total: Long = 0;
+        var total: Long = 0
         for (line in codeLines) {
             val author = line.from.commit.getAuthorIdent()
             if (author.getEmailAddress() != email) {
@@ -110,7 +111,7 @@ class CodeLongevity(repoPath: String, tailRev: String) {
 
     /**
      * Scans through the repo for alive and deleted code lines, and stores them
-     * in the |codeLines| list.
+     * in the [codeLines] list.
      */
     private fun compute() {
         val treeWalk = TreeWalk(repo)
@@ -136,7 +137,7 @@ class CodeLongevity(repoPath: String, tailRev: String) {
         revWalk.markStart(head)
 
         var commit: RevCommit? = revWalk.next()  // move the walker to the head
-        do {
+        while (commit != null && commit != tail) {
             var parentCommit: RevCommit? = revWalk.next()
 
             println("commit: ${commit!!.getName()}; '${commit.getShortMessage()}'")
@@ -171,6 +172,7 @@ class CodeLongevity(repoPath: String, tailRev: String) {
 
                 // File was deleted, put its lines into the files map.
                 if (diff.changeType == DiffEntry.ChangeType.DELETE) {
+                    // Text files only at this point, throw if not.
                     var lines = getFileLines(oldId, oldPath, commit)!!
                     files.put(oldPath, lines)
                 }
@@ -189,15 +191,15 @@ class CodeLongevity(repoPath: String, tailRev: String) {
                     var insStart = edit.getBeginB()
                     var insEnd = edit.getEndB()
                     val insCount = edit.getLengthB()
-                    println("del ($delStart, $delEnd), ins ($insStart, $insEnd)");
+                    println("del ($delStart, $delEnd), ins ($insStart, $insEnd)")
 
                     // Deletion case. Chase down the deleted lines through the
                     // history.
                     if (delCount > 0) {
                         var tmpLines = ArrayList<RevCommitLine>(delCount)
-                        var idx = delStart;
+                        var idx = delStart
                         while (idx < delEnd) {
-                            tmpLines.add(RevCommitLine(commit, oldPath, idx));
+                            tmpLines.add(RevCommitLine(commit, oldPath, idx))
                             idx++
                         }
 
@@ -226,7 +228,6 @@ class CodeLongevity(repoPath: String, tailRev: String) {
             }
             commit = parentCommit
         }
-        while (parentCommit != null && parentCommit != tail)
 
         // If a tail revision was given then the map has to contain unclaimed
         // code lines, i.e. the lines added before the tail revision. Push
